@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "metrics": {
+    "production_loc": 2322,
+    "production_files": 38,
+    "production_packages": 7,
+    "test_files": 10,
+    "production_functions": 175,
+    "decision_points": 323
+  },
+  "persistence": {
+    "module": "go.etcd.io/bbolt",
+    "entities": [
+      "Record",
+      "User",
+      "Event",
+      "Audit"
+    ],
+    "reopen_test": "TestPersistenceSurvivesReopen"
+  },
+  "workflows": [
+    {
+      "steps": [
+        "接收 CSV 或 JSON 补贴资料",
+        "规范化并校验登记字段",
+        "写入 bbolt Record 实体",
+        "通过记录查询接口展示结果"
+      ],
+      "test": "TestWorkflowOne"
+    },
+    {
+      "steps": [
+        "将 validated 记录登记进审核队列",
+        "值班员提交核验结果",
+        "根据核验结果更新状态并写审计",
+        "批准或拒绝后归档记录"
+      ],
+      "test": "TestWorkflowTwo"
+    },
+    {
+      "steps": [
+        "接收提交并记录事件",
+        "按区域和状态查询补贴记录",
+        "读取事件时间线追踪处理",
+        "生成状态和金额汇总"
+      ],
+      "test": "TestWorkflowThree"
+    }
+  ]
+}

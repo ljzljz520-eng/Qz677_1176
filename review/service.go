@@ -39,23 +39,21 @@ func (s *Service) Confirm(recordID, officerID, note string, approved bool) error
 	if officerID == "" {
 		return fmt.Errorf("officer is required")
 	}
-	record, err := s.store.GetRecord(recordID)
+	err := s.store.UpdateRecord(recordID, func(record *domain.Record) error {
+		if record.Status != domain.StatusPendingReview && record.Status != domain.StatusValidated {
+			return fmt.Errorf("record %s is not reviewable", recordID)
+		}
+		if record.HasOfficer(officerID) {
+			return fmt.Errorf("officer %s already confirmed", officerID)
+		}
+		record.Verifications = append(record.Verifications, domain.Verification{OfficerID: officerID, Approved: approved, Note: note, At: s.clock()})
+		record.Status = domain.NextStatus(record.Verifications)
+		return nil
+	})
 	if err != nil {
 		return err
 	}
-	if record.Status != domain.StatusPendingReview && record.Status != domain.StatusValidated {
-		return fmt.Errorf("record %s is not reviewable", recordID)
-	}
-	if record.HasOfficer(officerID) {
-		return fmt.Errorf("officer %s already confirmed", officerID)
-	}
-	record.Verifications = append(record.Verifications, domain.Verification{OfficerID: officerID, Approved: approved, Note: note, At: s.clock()})
-	record.Status = domain.NextStatus(record.Verifications)
-	record.UpdatedAt = s.clock()
 	s.invokeBeforeReplace(recordID)
-	if err := s.store.ReplaceRecord(record); err != nil {
-		return err
-	}
 	return s.store.AppendAudit(domain.AuditForRecord(recordID, "confirm", officerID, note))
 }
 
